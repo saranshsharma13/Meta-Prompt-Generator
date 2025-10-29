@@ -1,9 +1,13 @@
-from chat import chat_with_gemini, summarize_chat, load_chat, save_chat
-from config import SUMMARIZE_AFTER
+from chat import chat_with_gemini, summarize_chat, clear_history_file, save_meta_prompt
+from config import SUMMARIZE_AFTER, CHAT_LOG_FILE
 
 def main():
     print("🧙 Gemini Chat Summarizer — type 'summary' to compress, 'quit' to exit.\n")
-    chat_history = load_chat()
+    
+    # Clear full chat history JSON at start
+    clear_history_file(CHAT_LOG_FILE)
+
+    chat_history = []  # keep chat in-memory only
 
     while True:
         user_input = input("You: ").strip()
@@ -12,10 +16,12 @@ def main():
             break
         elif user_input.lower() == "summary":
             summary = summarize_chat(chat_history)
-            print("\n🧩 META PROMPT SUMMARY:\n")
+            save_meta_prompt(summary)  # save only meta summary
+            print("\n🧩 META PROMPT SUMMARY SAVED:\n")
             print(summary)
             continue
 
+        # Generate reply and append to in-memory history
         reply = chat_with_gemini(user_input, chat_history)
         print(f"\nGemini: {reply}\n")
 
@@ -23,12 +29,8 @@ def main():
         if len(chat_history) >= SUMMARIZE_AFTER * 2:
             print("\n⚙️ Conversation getting long — auto-generating summary...\n")
             summary = summarize_chat(chat_history)
+            save_meta_prompt(summary)  # store meta summary
             print(summary)
+            # Reset chat to just meta summary context
             chat_history = [{"role": "system", "content": summary}]
             print("\n✅ Context compressed — continuing chat.\n")
-
-        save_chat(chat_history)
-
-
-if __name__ == "__main__":
-    main()
