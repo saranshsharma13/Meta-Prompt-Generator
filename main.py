@@ -1,13 +1,21 @@
-from chat import chat_with_gemini, summarize_chat, clear_history_file, save_meta_prompt
-from config import SUMMARIZE_AFTER, CHAT_LOG_FILE
+from chat import chat_with_gemini, summarize_chat, save_meta_prompt, clear_history_file
+from config import SUMMARIZE_AFTER, CHAT_LOG_FILE, PERSONAS
+import argparse
 
 def main():
-    print("🧙 Gemini Chat Summarizer — type 'summary' to compress, 'quit' to exit.\n")
-    
-    # Clear full chat history JSON at start
+    parser = argparse.ArgumentParser(description="Gemini Chat with Personas")
+    parser.add_argument("--persona", choices=PERSONAS.keys(), default="friendly",
+                        help="Choose assistant persona")
+    args = parser.parse_args()
+
+    persona = args.persona
+    print(f"🧙 Gemini Chat Summarizer — Persona: {persona} ({PERSONAS[persona]['description']})")
+    print("Type 'summary' to compress, 'quit' to exit.\n")
+
+    # Clear old chat log
     clear_history_file(CHAT_LOG_FILE)
 
-    chat_history = []  # keep chat in-memory only
+    chat_history = []  # in-memory only
 
     while True:
         user_input = input("You: ").strip()
@@ -15,23 +23,24 @@ def main():
             print("👋 Goodbye!")
             break
         elif user_input.lower() == "summary":
-            summary = summarize_chat(chat_history)
-            save_meta_prompt(summary)  # save only meta summary
+            summary = summarize_chat(chat_history, persona)
+            save_meta_prompt(summary, persona)
             print("\n🧩 META PROMPT SUMMARY SAVED:\n")
             print(summary)
             continue
 
-        # Generate reply and append to in-memory history
-        reply = chat_with_gemini(user_input, chat_history)
+        reply = chat_with_gemini(user_input, chat_history, persona)
         print(f"\nGemini: {reply}\n")
 
-        # Auto-summarize if conversation is long
         if len(chat_history) >= SUMMARIZE_AFTER * 2:
             print("\n⚙️ Conversation getting long — auto-generating summary...\n")
-            summary = summarize_chat(chat_history)
-            save_meta_prompt(summary)  # store meta summary
+            summary = summarize_chat(chat_history, persona)
+            save_meta_prompt(summary, persona)
             print(summary)
-            # Reset chat to just meta summary context
+            # Reset chat to only meta summary
             chat_history = [{"role": "system", "content": summary}]
             print("\n✅ Context compressed — continuing chat.\n")
-main()
+
+
+if __name__ == "__main__":
+    main()
