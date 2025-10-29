@@ -34,3 +34,4 @@ def main():
             # Reset chat to just meta summary context
             chat_history = [{"role": "system", "content": summary}]
             print("\n✅ Context compressed — continuing chat.\n")
+main()
